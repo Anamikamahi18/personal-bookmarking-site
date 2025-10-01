@@ -1,7 +1,6 @@
 // User management
 export const getUsers = () => {
-  const users = localStorage.getItem('users');
-  return users ? JSON.parse(users) : [];
+  return JSON.parse(localStorage.getItem('users') || '[]');
 };
 
 export const saveUser = (user) => {
@@ -20,10 +19,9 @@ export const userExists = (email) => {
   return users.some(user => user.email === email);
 };
 
-// Session management
+// Current user management
 export const getCurrentUser = () => {
-  const currentUser = localStorage.getItem('currentUser');
-  return currentUser ? JSON.parse(currentUser) : null;
+  return JSON.parse(localStorage.getItem('currentUser') || 'null');
 };
 
 export const setCurrentUser = (user) => {
@@ -36,43 +34,39 @@ export const clearCurrentUser = () => {
 
 // Bookmark management
 export const getBookmarks = (username) => {
-  const bookmarks = localStorage.getItem(`bookmarks_${username}`);
-  return bookmarks ? JSON.parse(bookmarks) : [];
-};
-
-export const saveBookmarks = (username, bookmarks) => {
-  localStorage.setItem(`bookmarks_${username}`, JSON.stringify(bookmarks));
+  return JSON.parse(localStorage.getItem(`bookmarks_${username}`) || '[]');
 };
 
 export const addBookmark = (username, bookmark) => {
   const bookmarks = getBookmarks(username);
+  
   if (bookmarks.length >= 5) {
     throw new Error('Maximum 5 bookmarks allowed');
   }
+  
   const newBookmark = {
-    id: Date.now().toString(),
     ...bookmark,
+    id: Date.now().toString(),
     createdAt: new Date().toISOString()
   };
+  
   bookmarks.push(newBookmark);
-  saveBookmarks(username, bookmarks);
+  localStorage.setItem(`bookmarks_${username}`, JSON.stringify(bookmarks));
   return newBookmark;
 };
 
-export const updateBookmark = (username, bookmarkId, updatedData) => {
+export const updateBookmark = (username, updatedBookmark) => {
   const bookmarks = getBookmarks(username);
-  const index = bookmarks.findIndex(b => b.id === bookmarkId);
+  const index = bookmarks.findIndex(bookmark => bookmark.id === updatedBookmark.id);
+  
   if (index !== -1) {
-    bookmarks[index] = { ...bookmarks[index], ...updatedData };
-    saveBookmarks(username, bookmarks);
-    return bookmarks[index];
+    bookmarks[index] = updatedBookmark;
+    localStorage.setItem(`bookmarks_${username}`, JSON.stringify(bookmarks));
   }
-  return null;
 };
 
 export const deleteBookmark = (username, bookmarkId) => {
   const bookmarks = getBookmarks(username);
-  const filteredBookmarks = bookmarks.filter(b => b.id !== bookmarkId);
-  saveBookmarks(username, filteredBookmarks);
-  return filteredBookmarks;
+  const filteredBookmarks = bookmarks.filter(bookmark => bookmark.id !== bookmarkId);
+  localStorage.setItem(`bookmarks_${username}`, JSON.stringify(filteredBookmarks));
 };

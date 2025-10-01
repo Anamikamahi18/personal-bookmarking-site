@@ -55,10 +55,11 @@ const AddBookmark = ({ onBookmarkAdded }) => {
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
+          <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">
             Title
           </label>
           <input
+            id="title"
             type="text"
             name="title"
             value={formData.title}
@@ -70,10 +71,11 @@ const AddBookmark = ({ onBookmarkAdded }) => {
         </div>
 
         <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
+          <label htmlFor="url" className="block text-gray-700 text-sm font-bold mb-2">
             URL
           </label>
           <input
+            id="url"
             type="url"
             name="url"
             value={formData.url}

@@ -31,33 +31,36 @@ const EditBookmark = ({ bookmark, onBookmarkUpdated, onCancel }) => {
     setError('');
     setSuccess('');
 
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      setError('Please login first');
+    if (!formData.title || !formData.url) {
+      setError('All fields are required');
       return;
     }
 
-    const updatedBookmark = updateBookmark(currentUser.username, bookmark.id, formData);
-    if (updatedBookmark) {
-      setSuccess('Bookmark updated successfully!');
-      if (onBookmarkUpdated) {
-        onBookmarkUpdated(updatedBookmark);
-      }
-      setTimeout(() => {
-        onCancel();
-      }, 1500);
-    } else {
-      setError('Failed to update bookmark');
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      setError('User not logged in');
+      return;
     }
+
+    const updatedBookmark = {
+      ...bookmark,
+      title: formData.title,
+      url: formData.url
+    };
+
+    updateBookmark(currentUser.username, updatedBookmark);
+    setSuccess('Bookmark updated successfully!');
+    
+    setTimeout(() => {
+      onBookmarkUpdated();
+    }, 1000);
   };
 
-  if (!bookmark) return null;
-
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h2 className="text-2xl font-bold mb-4">Edit Bookmark</h2>
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-bold mb-4">Edit Bookmark</h3>
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
@@ -68,31 +71,31 @@ const EditBookmark = ({ bookmark, onBookmarkUpdated, onCancel }) => {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
+            <label htmlFor="edit-title" className="block text-gray-700 text-sm font-bold mb-2">
               Title
             </label>
             <input
+              id="edit-title"
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-              placeholder="Enter bookmark title"
               required
             />
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
+            <label htmlFor="edit-url" className="block text-gray-700 text-sm font-bold mb-2">
               URL
             </label>
             <input
+              id="edit-url"
               type="url"
               name="url"
               value={formData.url}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-              placeholder="https://example.com"
               required
             />
           </div>
@@ -101,13 +104,13 @@ const EditBookmark = ({ bookmark, onBookmarkUpdated, onCancel }) => {
             <button
               type="button"
               onClick={onCancel}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-800"
             >
               Update Bookmark
             </button>

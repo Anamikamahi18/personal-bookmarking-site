@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getBookmarks, deleteBookmark, getCurrentUser } from '../../utils/storage';
 import EditBookmark from './EditBookmark';
+import ConfirmModal from '../Layout/ConfirmModal';
 
 const BookmarkList = ({ refreshTrigger }) => {
   const [bookmarks, setBookmarks] = useState([]);
@@ -8,20 +9,21 @@ const BookmarkList = ({ refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingBookmark, setEditingBookmark] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [bookmarkToDelete, setBookmarkToDelete] = useState(null);
   const bookmarksPerPage = 3;
 
   const currentUser = getCurrentUser();
 
-  // Load bookmarks for current user
   const loadBookmarks = useCallback(() => {
     if (currentUser) {
       const userBookmarks = getBookmarks(currentUser.username);
-      const sortedBookmarks = userBookmarks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // Changed: Sort by oldest first (first added appears first)
+      const sortedBookmarks = userBookmarks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
       setBookmarks(sortedBookmarks);
     }
   }, [currentUser]);
 
-  // Filter bookmarks by search query
   const filterBookmarks = useCallback(() => {
     let filtered = bookmarks;
     if (searchQuery) {
@@ -33,11 +35,9 @@ const BookmarkList = ({ refreshTrigger }) => {
     setFilteredBookmarks(filtered);
   }, [bookmarks, searchQuery]);
 
-   // Add a separate effect to reset currentPage only when searchQuery changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
-
 
   useEffect(() => {
     loadBookmarks();
@@ -47,11 +47,17 @@ const BookmarkList = ({ refreshTrigger }) => {
     filterBookmarks();
   }, [filterBookmarks]);
 
-  // Handle delete with browser confirm (replace with modal if needed)
-  const handleDelete = (bookmarkId) => {
-    if (window.confirm('Are you sure you want to delete this bookmark?')) {
-      deleteBookmark(currentUser.username, bookmarkId);
+  const handleDeleteClick = (bookmark) => {
+    setBookmarkToDelete(bookmark);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (bookmarkToDelete) {
+      deleteBookmark(currentUser.username, bookmarkToDelete.id);
       loadBookmarks();
+      setShowDeleteModal(false);
+      setBookmarkToDelete(null);
     }
   };
 
@@ -74,13 +80,11 @@ const BookmarkList = ({ refreshTrigger }) => {
     });
   };
 
-  // Pagination logic
   const totalPages = Math.max(1, Math.ceil(filteredBookmarks.length / bookmarksPerPage));
   const indexOfLastBookmark = currentPage * bookmarksPerPage;
   const indexOfFirstBookmark = indexOfLastBookmark - bookmarksPerPage;
   const currentBookmarks = filteredBookmarks.slice(indexOfFirstBookmark, indexOfLastBookmark);
 
-  // Prevent going out of bounds
   const paginate = (pageNumber) => {
     if (pageNumber < 1 || pageNumber > totalPages) return;
     setCurrentPage(pageNumber);
@@ -95,17 +99,18 @@ const BookmarkList = ({ refreshTrigger }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">My Bookmarks ({filteredBookmarks.length})</h2>
+    <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+        <h2 className="text-xl md:text-2xl font-bold">My Bookmarks ({filteredBookmarks.length})</h2>
+        
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative w-full md:w-64">
           <input
             type="text"
             placeholder="Search bookmarks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 w-64"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           />
           <svg
             className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
@@ -135,33 +140,34 @@ const BookmarkList = ({ refreshTrigger }) => {
           <div className="space-y-4">
             {currentBookmarks.map((bookmark) => (
               <div key={bookmark.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2 break-words">
                       {bookmark.title}
                     </h3>
                     <a
                       href={bookmark.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-700 break-all"
+                      className="text-blue-500 hover:text-blue-700 break-all text-sm md:text-base"
                     >
                       {bookmark.url}
                     </a>
-                    <p className="text-sm text-gray-500 mt-2">
+                    <p className="text-xs md:text-sm text-gray-500 mt-2">
                       Added: {formatDate(bookmark.createdAt)}
                     </p>
                   </div>
-                  <div className="flex space-x-2 ml-4">
+                  
+                  <div className="flex flex-row md:flex-col lg:flex-row gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleEdit(bookmark)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+                      className="flex-1 md:flex-none bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(bookmark.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                      onClick={() => handleDeleteClick(bookmark)}
+                      className="flex-1 md:flex-none bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
                     >
                       Delete
                     </button>
@@ -174,11 +180,11 @@ const BookmarkList = ({ refreshTrigger }) => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-6">
-              <nav className="flex space-x-2">
+              <nav className="flex flex-wrap justify-center gap-2">
                 <button
                   onClick={() => paginate(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-3 py-2 rounded ${
+                  className={`px-2 md:px-3 py-2 rounded text-sm ${
                     currentPage === 1
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-500 hover:bg-blue-600 text-white'
@@ -186,11 +192,12 @@ const BookmarkList = ({ refreshTrigger }) => {
                 >
                   Previous
                 </button>
+                
                 {[...Array(totalPages)].map((_, index) => (
                   <button
                     key={index + 1}
                     onClick={() => paginate(index + 1)}
-                    className={`px-3 py-2 rounded ${
+                    className={`px-2 md:px-3 py-2 rounded text-sm ${
                       currentPage === index + 1
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -199,10 +206,11 @@ const BookmarkList = ({ refreshTrigger }) => {
                     {index + 1}
                   </button>
                 ))}
+                
                 <button
                   onClick={() => paginate(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-2 rounded ${
+                  className={`px-2 md:px-3 py-2 rounded text-sm ${
                     currentPage === totalPages
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-500 hover:bg-blue-600 text-white'
@@ -224,6 +232,16 @@ const BookmarkList = ({ refreshTrigger }) => {
           onCancel={() => setEditingBookmark(null)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={showDeleteModal}
+        title="Delete Bookmark"
+        message="Are you sure you want to delete this bookmark?"
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 };
